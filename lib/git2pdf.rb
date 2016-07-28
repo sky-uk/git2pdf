@@ -14,6 +14,8 @@ class Git2Pdf
     @api = options[:api] || 'https://api.github.com'
     @labels = "&labels=#{options[:labels]}" || ''
     @from_number = options[:from_number] || nil
+    @from_date = options[:from_date] || nil
+    @quiet_labels = options[:quiet_labels] || []
   end
 
   def execute
@@ -24,7 +26,7 @@ class Git2Pdf
   def get_issues
     batch = []
     self.repos.each do |repo|
-      #json = `curl -u#{auth} https://api.github.com/repos/pocketworks/repo/issues?per_page=100 | jq '.[] | {state: .state, milestone: .milestone.title, created_at: .created_at, title: .title, number: .number, labels: [.labels[].name]}'`
+      #json = `curl -u#{auth} https://api.github.com/repos/pocketworks/repo/issues?per_page=100 | jq '.[] | {state: .state, created_at: .created_at, title: .title, number: .number, labels: [.labels[].name]}'`
       json = ""
       if @org
         json = open("#{@api}/repos/#{@org}/#{repo}/issues?per_page=200&state=open#{@labels}", :http_basic_authentication => basic_auth).read
@@ -41,18 +43,27 @@ class Git2Pdf
             next
           end
         end
-        labels = val["labels"].collect { |l| l["name"].upcase }.join(', ')
+        if @from_date
+          from_date = DateTime.parse(@from_date)
+          issue_creation_date = DateTime.parse(val["created_at"])
+
+          if from_date > issue_creation_date
+            next
+          end
+        end
+        labels = val["labels"].reject { |l| @quiet_labels.include?(l["name"]) }
+                              .collect { |l| l["name"].upcase }
+                              .join(', ')
+
         type = ""
         type = "BUG" if labels =~ /bug/i #not billable
         type = "FEATURE" if labels =~ /feature/i #billable
         type = "ENHANCEMENT" if labels =~ /enhancement/i #billable
         type = "AMEND" if labels =~ /amend/i #not billable
-        type = "TASK" if labels =~ /task/i #not billable
-
-        milestone = val["milestone"] ? val["milestone"]["title"] : ""
+        type = "TASK" if labels =~ /userstory/i #not billable
 
         #labels.include?(['BUG','FEATURE','ENHANCEMENT','QUESTION'])
-        hash = {short_title: repo, ref: "#{val["number"]}", long_title: "#{val["title"]}", type: type, due: "", labels: labels, milestone: "#{milestone}"}
+        hash = {short_title: repo, ref: "#{val["number"]}", long_title: "#{val["title"]}", type: type, due: "", labels: labels}
         batch << hash
       end
     end
@@ -115,30 +126,21 @@ class Git2Pdf
         font 'Lato', :style => :bold, size: 20
         text_box short_title, :at => [margin, y_offset], :width => 210-margin, :overflow => :shrink_to_fit
 
-        if issue[:milestone] and issue[:milestone] != ""
-          y_offset = y_offset - 30
-          # Milestone
-          font 'Lato', :style => :light, size: 16
-          text_box issue[:milestone].upcase, :at => [margin, y_offset], :width => 280, :overflow => :shrink_to_fit
-          #text_box fields["due"] || "", :at=>[120,20], :width=>60, :overflow=>:shrink_to_fit
-          y_offset = y_offset + 20
-        end
-        
         fill_color "EEEEEE"
-        fill_color "D0021B" if issue[:type] == "BUG"            
-        fill_color "1D8FCE" if issue[:type] == "TASK"            
+        fill_color "D0021B" if issue[:type] == "BUG"
+        fill_color "1D8FCE" if issue[:type] == "TASK"
         fill_color "FBF937" if issue[:type] == "FEATURE"
         fill_color "F5B383" if issue[:type] == "AMEND"
         fill_color "FBF937" if issue[:type] == "ENHANCEMENT"
 
         if issue[:type] and issue[:type] != ""
-          fill{rectangle([0,220], margin-10, 220)}          
+          fill{rectangle([0,220], margin-10, 220)}
         else
-          fill{rectangle([0,220], margin-10, 220)}          
+          fill{rectangle([0,220], margin-10, 220)}
         end
-        
+
         fill_color(0,0,0,100)
-        
+
         # if issue[:type] and issue[:type] != ""
 #           y_offset = y_offset - 20
 #           # Type
@@ -155,11 +157,9 @@ class Git2Pdf
 
         # Labels
         font 'Lato', :style => :bold, size: 12
-        text_box issue[:labels].length == 0 ? "NO LABELS!" : issue[:labels], :at => [margin, 20], :width => 220-margin, :overflow => :shrink_to_fit
+        text_box issue[:labels].length == 0 ? "" : issue[:labels], :at => [margin, 20], :width => 220-margin, :overflow => :shrink_to_fit
         #text_box fields[:due] || "", :at=>[120,20], :width=>60, :overflow=>:shrink_to_fit
         #end
-
-        
 
         #if col == 1
         #  row = row + 1

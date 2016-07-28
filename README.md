@@ -45,6 +45,10 @@ by [Pocketworks](http://pocketworks.co.uk), a UK mobile apps and sales technolog
 
     $ git2pdf gen -u tobinharris -p xxx -r "pocketworks/my-project, pocketworks/come-cool-repo, pocketworks/another-repo" -f 120
 
+### Remove Github labels auto-generated from task radiators (e.g. Waffle.io)
+
+    $ git2pdf gen uranusjr/macdown -u tobinharris -p xxx -q 'ready, in progress, done' 
+
 TODO:
 
 * Improve CLI syntax, it's a bit shite
