@@ -43,7 +43,7 @@ by [Pocketworks](http://pocketworks.co.uk), a UK mobile apps and sales technolog
 
 ### Start printing from a specific issue number
 
-    $ git2pdf gen -u tobinharris -p xxx -r "pocketworks/my-project, pocketworks/come-cool-repo, pocketworks/another-repo" -f 120
+    $ git2pdf gen -u tobinharris -p xxx -r "pocketworks/my-project, pocketworks/come-cool-repo, pocketworks/another-repo" -n 120
 
 ### Remove Github labels auto-generated from task radiators (e.g. Waffle.io)
 
